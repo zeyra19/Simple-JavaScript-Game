@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avoid the Red Circles</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #202a3b, #1a1f2e);
+      font-family: Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    .background-cube {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+      width: 200px;
+      height: 200px;
+      transform-style: preserve-3d;
+      animation: rotateCube 10s infinite linear;
+    }
+
+    .background-cube div {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .background-cube .front {
+      transform: translateZ(100px);
+    }
+
+    .background-cube .back {
+      transform: rotateY(180deg) translateZ(100px);
+    }
+
+    .background-cube .left {
+      transform: rotateY(-90deg) translateZ(100px);
+    }
+
+    .background-cube .right {
+      transform: rotateY(90deg) translateZ(100px);
+    }
+
+    .background-cube .top {
+      transform: rotateX(90deg) translateZ(100px);
+    }
+
+    .background-cube .bottom {
+      transform: rotateX(-90deg) translateZ(100px);
+    }
+
+    @keyframes rotateCube {
+      0% {
+        transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+      }
+      50% {
+        transform: translate(-50%, -50%) rotateX(180deg) rotateY(180deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotateX(360deg) rotateY(360deg);
+      }
+    }
+
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 700px;
+      z-index: 2;
+    }
+
+    .title {
+      font-size: 28px;
+      margin-bottom: 15px;
+      color: #e0e0e0;
+    }
+
+    .frame {
+      position: relative;
+      height: 300px;
+      width: 100%;
+      border: 3px solid #3b6ea5;
+      background-color: #1a1f2e;
+      overflow: hidden;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .player {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translate(0, -50%);
+      width: 30px;
+      height: 30px;
+      background-color: #7bdcb5;
+      border-radius: 50%;
+    }
+
+    .obstacle {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-color: #ff6b6b;
+      border-radius: 50%;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #38a1db;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .button:hover {
+      background-color: #1e88c7;
+    }
+
+    .game-over-message {
+      display: none;
+      font-size: 20px;
+      color: #ff6b6b;
+      margin-top: 10px;
+    }
+
+    .score {
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="background-cube">
+    <div class="front"></div>
+    <div class="back"></div>
+    <div class="left"></div>
+    <div class="right"></div>
+    <div class="top"></div>
+    <div class="bottom"></div>
+  </div>
+
+  <div class="container">
+    <div class="title">Avoid the Red Circles</div>
+    <div class="score" id="score">Score: 0</div>
+    <div class="frame">
+      <div class="player" id="player"></div>
+    </div>
+    <div class="button-container">
+      <button class="button" onclick="move('up')">Up</button>
+      <button class="button" onclick="move('down')">Down</button>
+      <button class="button" onclick="startGame()">Start</button>
+    </div>
+    <div id="game-over" class="game-over-message">Game Over! Final Score: <span id="final-score"></span></div>
+  </div>
+
+  <script>
+      let player = document.getElementById("player");
+      let frame = document.querySelector(".frame");
+      let scoreElement = document.getElementById("score");
+      let gameOverElement = document.getElementById("game-over");
+      let finalScoreElement = document.getElementById("final-score");
+      let speed = 2;
+      let gameOver = false;
+      let gamePaused = false;
+      let obstacles = [];
+      let score = 0;
+      let timer;
+
+      const numberOfObstacles = 8;
+
+      document.addEventListener("keydown", function (event) {
+          if (event.key === "ArrowUp") {
+              move("up");
+          } else if (event.key === "ArrowDown") {
+              move("down");
+          } else if (event.key === "Enter") {
+              startGame();
+          } else if (event.key.toLowerCase() === "p") {
+              pauseGame();
+          }
+      });
+
+      function randomInt(min, max) {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function randomPosition(element) {
+          let frameWidth = frame.offsetWidth;
+          let frameHeight = frame.offsetHeight;
+          let elementWidth = element.offsetWidth;
+          let elementHeight = element.offsetHeight;
+
+          let newLeft = randomInt(0, frameWidth - elementWidth);
+          let newTop = randomInt(0, frameHeight - elementHeight);
+
+          element.style.left = newLeft + "px";
+          element.style.top = newTop + "px";
+      }
+
+      function createObstacles() {
+          for (let i = 0; i < numberOfObstacles; i++) {
+              let obstacle = document.createElement("div");
+              obstacle.classList.add("obstacle");
+              randomPosition(obstacle);
+              frame.appendChild(obstacle);
+              obstacles.push(obstacle);
+          }
+      }
+
+      function move(direction) {
+          if (gameOver || gamePaused) return;
+
+          let playerTop = parseFloat(player.style.top);
+
+          if (direction === "up") {
+              player.style.top = Math.max(playerTop - 20, 0) + "px";
+          } else if (direction === "down") {
+              player.style.top = Math.min(
+                  playerTop + 20,
+                  frame.offsetHeight - player.offsetHeight
+              ) + "px";
+          }
+
+          if (checkCollision()) {
+              endGame();
+          }
+      }
+
+      function checkCollision() {
+          let playerRect = player.getBoundingClientRect();
+
+          return obstacles.some((obstacle) => {
+              let obstacleRect = obstacle.getBoundingClientRect();
+              return (
+                  playerRect.top < obstacleRect.bottom &&
+                  playerRect.bottom > obstacleRect.top &&
+                  playerRect.left < obstacleRect.right &&
+                  playerRect.right > obstacleRect.left
+              );
+          });
+      }
+
+      function restartGame() {
+          gameOver = false;
+          gamePaused = false;
+          score = 0;
+          scoreElement.textContent = "Score: 0.00";
+          gameOverElement.style.display = "none";
+          player.style.left = "10px";
+          player.style.top = frame.offsetHeight / 2 - player.offsetHeight / 2 + "px";
+          obstacles.forEach((obstacle) => frame.removeChild(obstacle));
+          obstacles = [];
+          createObstacles();
+      }
+
+      function startGame() {
+          restartGame();
+          startTimer();
+          moveObstacles();
+      }
+
+      function pauseGame() {
+          gamePaused = true;
+          clearInterval(timer);
+      }
+
+      function resumeGame() {
+          gamePaused = false;
+          startTimer();
+          moveObstacles();
+      }
+
+      function startTimer() {
+          let startTime = Date.now();
+          timer = setInterval(() => {
+              let elapsedTime = (Date.now() - startTime) / 1000;
+              score = elapsedTime.toFixed(2);
+              scoreElement.textContent = `Score: ${score}`;
+          }, 100);
+      }
+
+      function endGame() {
+          gameOver = true;
+          clearInterval(timer);
+          finalScoreElement.textContent = score;
+          gameOverElement.style.display = "block";
+      }
+
+      function moveObstacles() {
+          if (gameOver || gamePaused) return;
+
+          obstacles.forEach((obstacle) => {
+              let obstacleLeft = parseFloat(obstacle.style.left);
+              obstacle.style.left = obstacleLeft - speed + "px";
+
+              if (obstacleLeft <= -obstacle.offsetWidth) {
+                  randomPosition(obstacle);
+                  obstacle.style.left = frame.offsetWidth + "px";
+              }
+          });
+
+          if (!gameOver && !gamePaused) {
+              requestAnimationFrame(moveObstacles);
+          }
+
+          if (checkCollision()) {
+              endGame();
+          }
+      }
+  </script>
+</body>
+
+</html>
